@@ -14,13 +14,13 @@ import (
 	"strings"
 )
 
-// HandlerContext represents the underlying lower-level reader/writer interface
-// typically associated with HTTP handlers in Go. This type _may_ be added to a
-// handler's function signature and, if so, will be hydrated with the
-// corresponding HTTP request and response writer at call-time. Note: If the
-// handler specifies a return type, the writer will be empty since writing will
-// be handled internally by the framework.
-type HandlerContext struct {
+// Ctx represents the underlying lower-level reader/writer interface typically
+// associated with HTTP handlers in Go. This type _may_ be added to a handler's
+// function signature and, if so, will be hydrated with the corresponding HTTP
+// request and response writer at call-time. Note: If the handler specifies a
+// return type, the writer will be empty since writing will be handled
+// internally by the framework.
+type Ctx struct {
 	Writer  *http.ResponseWriter
 	Request *http.Request
 }
@@ -37,15 +37,15 @@ type PropsHandler struct {
 	returns  bool
 }
 
-type MethodGet struct{}
-type MethodHead struct{}
-type MethodPost struct{}
-type MethodPut struct{}
-type MethodPatch struct{}
-type MethodDelete struct{}
-type MethodConnect struct{}
-type MethodOptions struct{}
-type MethodTrace struct{}
+type MethodGet struct{}     // nolint
+type MethodHead struct{}    // nolint
+type MethodPost struct{}    // nolint
+type MethodPut struct{}     // nolint
+type MethodPatch struct{}   // nolint
+type MethodDelete struct{}  // nolint
+type MethodConnect struct{} // nolint
+type MethodOptions struct{} // nolint
+type MethodTrace struct{}   // nolint
 
 // String implements fmt.Stringer
 func (h PropsHandler) String() string {
@@ -137,7 +137,7 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	hctx := HandlerContext{
+	hctx := Ctx{
 		Request: r,
 	}
 

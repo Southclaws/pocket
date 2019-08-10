@@ -23,7 +23,7 @@ func handler(props struct {
 }
 ```
 
-## Why?
+## Why?
 
 Go has a great ecosystem for HTTP middleware thanks to the standard Request/ResponseWriter interface. This pattern is
 great, until it comes to writing your actual business logic handlers. The Request/ResponseWriter is just too low level

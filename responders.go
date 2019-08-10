@@ -5,27 +5,27 @@ import (
 	"net/http"
 )
 
-var _ = (Response)(&BasicResponder{})
+var _ = (Responder)(&BasicResponder{})
 
-// BasicResponder provides a basic implementation for the Response interface for
-// writing simple responses.
+// BasicResponder provides a basic implementation for the Responder interface
+// for writing simple responses.
 type BasicResponder struct {
 	H http.Header
 	R io.ReadCloser
 	S int
 }
 
-// Headers implements Response
+// Headers implements Responder
 func (r BasicResponder) Headers() http.Header {
 	return r.H
 }
 
-// Body implements Response
+// Body implements Responder
 func (r BasicResponder) Body() io.ReadCloser {
 	return r.R
 }
 
-// Status implements Response
+// Status implements Responder
 func (r BasicResponder) Status() int {
 	return r.S
 }

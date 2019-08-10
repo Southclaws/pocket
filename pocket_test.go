@@ -1,6 +1,9 @@
 package pocket_test
 
 import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,7 +41,7 @@ func TestHandler_WithQueryParam(t *testing.T) {
 	}), `/?UserID=user1`)
 }
 
-func TestHandler_WithErrorReturn(t *testing.T) {
+func TestHandler_WithNilErrorReturn(t *testing.T) {
 	withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
 	}) error {
@@ -50,10 +53,28 @@ func TestHandler_WithErrorReturn(t *testing.T) {
 	}), `/?UserID=user1`)
 }
 
-func TestHandler_WithResponseReturn(t *testing.T) {
+func TestHandler_WithErrorReturn(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
-	}) pocket.Response {
+	}) error {
+
+		assert.Assert(t, c.Writer == nil,
+			"the writer should be nil when there is a return value present")
+
+		return fmt.Errorf("an error occurred")
+	}), `/?UserID=user1`)
+	assert.Equal(t, resp.StatusCode, http.StatusInternalServerError)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	assert.Assert(t, bytes.Equal([]byte("an error occurred"), body))
+}
+
+func TestHandler_WithResponderReturn(t *testing.T) {
+	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
+		pocket.MethodGet
+	}) pocket.Responder {
 
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")

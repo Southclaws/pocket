@@ -35,18 +35,26 @@ type PropsHandler struct {
 	propsT   reflect.Type
 	function reflect.Value
 	methods  []string
-	returns  bool
+	returns  returnType
 }
 
-// Response describes a type that can resolve to a HTTP response. This means
+type returnType uint8
+
+const (
+	returnTypeWriter    returnType = iota
+	returnTypeResponder returnType = iota
+	returnTypeError     returnType = iota
+)
+
+// Responder describes a type that can resolve to a HTTP response. This means
 // providing a response code and a body.
-type Response interface {
+type Responder interface {
 	Headers() http.Header
 	Body() io.ReadCloser
 	Status() int
 }
 
-var reflectedResponseType = reflect.TypeOf((*Response)(nil)).Elem()
+var reflectedResponseType = reflect.TypeOf((*Responder)(nil)).Elem()
 var reflectedErrorType = reflect.TypeOf((*error)(nil)).Elem()
 
 type MethodGet struct{}     // nolint
@@ -131,16 +139,16 @@ func GenerateHandler(f interface{}) (h PropsHandler) {
 	}
 
 	if numOut == 1 {
-		h.returns = true
-
 		rt := t.Out(0)
 		if rt.Implements(reflectedResponseType) {
-			// TODO!
+			h.returns = returnTypeResponder
 		} else if rt.Implements(reflectedErrorType) {
-			// TODO!
+			h.returns = returnTypeError
 		} else {
 			panic(fmt.Sprintf("unsupported handler return type %v", rt.Name()))
 		}
+	} else {
+		h.returns = returnTypeWriter
 	}
 
 	return
@@ -168,17 +176,24 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		Request: r,
 	}
 
-	if !h.returns {
+	if h.returns == returnTypeWriter {
 		hctx.Writer = &w
 	}
 
-	result := h.function.Call([]reflect.Value{
+	results := h.function.Call([]reflect.Value{
 		reflect.ValueOf(hctx),
 		h.propsV,
 	})
 
-	log.Println("Results:")
-	for _, r := range result {
-		log.Println(r)
+	if len(results) == 1 {
+		if h.returns == returnTypeError {
+			ev := results[0].Convert(reflectedErrorType)
+			if !ev.IsNil() {
+				w.WriteHeader(http.StatusInternalServerError)
+				if _, err := w.Write([]byte(ev.Elem().Interface().(error).Error())); err != nil {
+					panic(err)
+				}
+			}
+		}
 	}
 }

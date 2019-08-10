@@ -35,3 +35,15 @@ this boilerplate all over the place. Doing it declaratively is much nicer!
 Note: This package makes generous use of reflection and, while all efforts are made to cache unnecessary reflection
 calls and perform most of at handler generation-time, this reflection _may_ impact extremely high-traffic web servers.
 There are currently no benchmarks but this is something I plan to work on in future.
+
+## Some Ideas
+
+_A scratchpad for ideas for this library!_
+
+- `func(string)`/`func() string` signatures for quick and easy text requests/responses.
+- `func(T)`/`func(T)` signatures for quick JSON endpoints.
+- nice default for `func(...) error` signatures
+- Provide some configuration for the handler generator:
+  - mapping from `error` types to statuses, for those `func(...) error` sigs.
+  - wrap JSON responses in some default body
+- generate index/sitemap/documentation based on signatures

@@ -38,7 +38,7 @@ func TestHandler_WithQueryParam(t *testing.T) {
 	}), `/?UserID=user1`)
 }
 
-func TestHandler_WithReturn(t *testing.T) {
+func TestHandler_WithErrorReturn(t *testing.T) {
 	withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
 	}) error {
@@ -48,4 +48,17 @@ func TestHandler_WithReturn(t *testing.T) {
 
 		return nil
 	}), `/?UserID=user1`)
+}
+
+func TestHandler_WithResponseReturn(t *testing.T) {
+	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
+		pocket.MethodGet
+	}) pocket.Response {
+
+		assert.Assert(t, c.Writer == nil,
+			"the writer should be nil when there is a return value present")
+
+		return pocket.OK()
+	}), ``)
+	assert.Equal(t, resp.StatusCode, http.StatusOK)
 }

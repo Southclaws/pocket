@@ -8,6 +8,7 @@ package pocket
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"reflect"
@@ -36,6 +37,17 @@ type PropsHandler struct {
 	methods  []string
 	returns  bool
 }
+
+// Response describes a type that can resolve to a HTTP response. This means
+// providing a response code and a body.
+type Response interface {
+	Headers() http.Header
+	Body() io.ReadCloser
+	Status() int
+}
+
+var reflectedResponseType = reflect.TypeOf((*Response)(nil)).Elem()
+var reflectedErrorType = reflect.TypeOf((*error)(nil)).Elem()
 
 type MethodGet struct{}     // nolint
 type MethodHead struct{}    // nolint
@@ -113,9 +125,24 @@ func GenerateHandler(f interface{}) (h PropsHandler) {
 		}
 	}
 
-	if t.NumOut() > 0 {
-		h.returns = true
+	numOut := t.NumOut()
+	if numOut > 1 {
+		panic("attempt to generate a props-based handler with multiple return values")
 	}
+
+	if numOut == 1 {
+		h.returns = true
+
+		rt := t.Out(0)
+		if rt.Implements(reflectedResponseType) {
+			// TODO!
+		} else if rt.Implements(reflectedErrorType) {
+			// TODO!
+		} else {
+			panic(fmt.Sprintf("unsupported handler return type %v", rt.Name()))
+		}
+	}
+
 	return
 }
 

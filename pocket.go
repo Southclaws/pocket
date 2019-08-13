@@ -46,6 +46,18 @@ const (
 	returnTypeError     returnType = iota
 )
 
+func (r returnType) String() string {
+	switch r {
+	case returnTypeWriter:
+		return "Writer"
+	case returnTypeResponder:
+		return "Responder"
+	case returnTypeError:
+		return "Error"
+	}
+	return "Unknown"
+}
+
 // Responder describes an error type that can resolve to a HTTP response. This
 // means providing a response code and a body.
 type Responder interface {
@@ -70,7 +82,7 @@ type MethodTrace struct{}   // nolint
 
 // String implements fmt.Stringer
 func (h PropsHandler) String() string {
-	return h.function.Type().String()
+	return fmt.Sprintf("%s -> %s", h.propsT.String(), h.returns.String())
 }
 
 // Handler is a helper for usage with HTTP mux libraries, it will generate a

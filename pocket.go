@@ -186,43 +186,45 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		h.propsV,
 	})
 
-	if len(results) == 1 {
-		if h.returns == returnTypeError {
-			ev := results[0].Convert(reflectedErrorType)
-			if !ev.IsNil() {
-				w.WriteHeader(http.StatusInternalServerError)
-				if _, err := w.Write([]byte(ev.Elem().Interface().(error).Error())); err != nil {
-					panic(err)
-				}
-			}
-		} else if h.returns == returnTypeResponder {
-			ev := results[0].Convert(reflectedResponseType)
-			if !ev.IsNil() {
-				//nolint:errcheck - this was asserted during handler generation
-				responder := ev.Elem().Interface().(Responder)
-				w.WriteHeader(responder.Status())
-				if body := responder.Body(); body != nil {
-					if _, err := io.Copy(w, body); err != nil {
-						panic(err)
-					}
-				}
-			}
-		} else {
-			ei := results[0].Interface()
-			switch ev := ei.(type) {
-			case fmt.Stringer:
-				if _, err := w.Write([]byte(ev.String())); err != nil {
-					panic(err)
-				}
+	if len(results) != 1 {
+		return
+	}
 
-			case io.Reader:
-				if _, err := io.Copy(w, ev); err != nil {
+	if h.returns == returnTypeError {
+		ev := results[0].Convert(reflectedErrorType)
+		if !ev.IsNil() {
+			w.WriteHeader(http.StatusInternalServerError)
+			if _, err := w.Write([]byte(ev.Elem().Interface().(error).Error())); err != nil {
+				panic(err)
+			}
+		}
+	} else if h.returns == returnTypeResponder {
+		ev := results[0].Convert(reflectedResponseType)
+		if !ev.IsNil() {
+			//nolint:errcheck - this was asserted during handler generation
+			responder := ev.Elem().Interface().(Responder)
+			w.WriteHeader(responder.Status())
+			if body := responder.Body(); body != nil {
+				if _, err := io.Copy(w, body); err != nil {
 					panic(err)
 				}
-
-			default:
-				panic(fmt.Sprintf("don't know how to respond with a %v", ev))
 			}
+		}
+	} else {
+		ei := results[0].Interface()
+		switch ev := ei.(type) {
+		case fmt.Stringer:
+			if _, err := w.Write([]byte(ev.String())); err != nil {
+				panic(err)
+			}
+
+		case io.Reader:
+			if _, err := io.Copy(w, ev); err != nil {
+				panic(err)
+			}
+
+		default:
+			panic(fmt.Sprintf("don't know how to respond with a %v", ev))
 		}
 	}
 }

@@ -46,9 +46,10 @@ const (
 	returnTypeError     returnType = iota
 )
 
-// Responder describes a type that can resolve to a HTTP response. This means
-// providing a response code and a body.
+// Responder describes an error type that can resolve to a HTTP response. This
+// means providing a response code and a body.
 type Responder interface {
+	error
 	Headers() http.Header
 	Body() io.ReadCloser
 	Status() int
@@ -193,6 +194,36 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 				if _, err := w.Write([]byte(ev.Elem().Interface().(error).Error())); err != nil {
 					panic(err)
 				}
+			}
+		} else if h.returns == returnTypeResponder {
+			ev := results[0].Convert(reflectedResponseType)
+			if !ev.IsNil() {
+				if responder, ok := ev.Elem().Interface().(Responder); ok && responder != nil {
+					w.WriteHeader(responder.Status())
+					if body := responder.Body(); body != nil {
+						if _, err := io.Copy(w, body); err != nil {
+							panic(err)
+						}
+					}
+				} else {
+					log.Print("responder was nil")
+				}
+			}
+		} else {
+			ei := results[0].Interface()
+			switch ev := ei.(type) {
+			case fmt.Stringer:
+				if _, err := w.Write([]byte(ev.String())); err != nil {
+					panic(err)
+				}
+
+			case io.Reader:
+				if _, err := io.Copy(w, ev); err != nil {
+					panic(err)
+				}
+
+			default:
+				panic(fmt.Sprintf("don't know how to respond with a %v", ev))
 			}
 		}
 	}

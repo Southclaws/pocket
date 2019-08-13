@@ -2,6 +2,7 @@ package pocket_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -32,7 +33,6 @@ func TestHandler_WithQueryParam(t *testing.T) {
 		pocket.MethodGet
 		ParamUserID string
 	}) {
-
 		assert.Equal(t, "user1", props.ParamUserID)
 		assert.Assert(t, c.Writer != nil,
 			"the writer should not be nil as there is no return value")
@@ -45,7 +45,6 @@ func TestHandler_WithNilErrorReturn(t *testing.T) {
 	withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
 	}) error {
-
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
 
@@ -57,7 +56,6 @@ func TestHandler_WithErrorReturn(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
 	}) error {
-
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
 
@@ -71,15 +69,31 @@ func TestHandler_WithErrorReturn(t *testing.T) {
 	assert.Assert(t, bytes.Equal([]byte("an error occurred"), body))
 }
 
-func TestHandler_WithResponderReturn(t *testing.T) {
+func TestHandler_WithResponderReturnOK(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
 		pocket.MethodGet
 	}) pocket.Responder {
-
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
 
 		return pocket.OK()
 	}), ``)
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
+}
+
+func TestHandler_WithResponderReturnInternal(t *testing.T) {
+	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
+		pocket.MethodGet
+	}) pocket.Responder {
+		assert.Assert(t, c.Writer == nil,
+			"the writer should be nil when there is a return value present")
+
+		return pocket.ErrInternalServerError(errors.New("bad thing happened :("))
+	}), ``)
+	assert.Equal(t, resp.StatusCode, http.StatusInternalServerError)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	assert.Assert(t, bytes.Equal([]byte("bad thing happened :("), body))
 }

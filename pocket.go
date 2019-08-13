@@ -198,15 +198,13 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		} else if h.returns == returnTypeResponder {
 			ev := results[0].Convert(reflectedResponseType)
 			if !ev.IsNil() {
-				if responder, ok := ev.Elem().Interface().(Responder); ok && responder != nil {
-					w.WriteHeader(responder.Status())
-					if body := responder.Body(); body != nil {
-						if _, err := io.Copy(w, body); err != nil {
-							panic(err)
-						}
+				//nolint:errcheck - this was asserted during handler generation
+				responder := ev.Elem().Interface().(Responder)
+				w.WriteHeader(responder.Status())
+				if body := responder.Body(); body != nil {
+					if _, err := io.Copy(w, body); err != nil {
+						panic(err)
 					}
-				} else {
-					log.Print("responder was nil")
 				}
 			}
 		} else {

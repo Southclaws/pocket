@@ -190,7 +190,8 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.returns == returnTypeError {
+	switch h.returns {
+	case returnTypeError:
 		ev := results[0].Convert(reflectedErrorType)
 		if !ev.IsNil() {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -198,7 +199,8 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 		}
-	} else if h.returns == returnTypeResponder {
+
+	case returnTypeResponder:
 		ev := results[0].Convert(reflectedResponseType)
 		if !ev.IsNil() {
 			//nolint:errcheck - this was asserted during handler generation
@@ -210,7 +212,8 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	} else {
+
+	case returnTypeWriter:
 		ei := results[0].Interface()
 		switch ev := ei.(type) {
 		case fmt.Stringer:
@@ -226,5 +229,13 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		default:
 			panic(fmt.Sprintf("don't know how to respond with a %v", ev))
 		}
+
+	default:
+		panic(fmt.Sprintf(
+			"unknown handler return type %v something went wrong during handler generation!",
+			h.returns,
+		))
 	}
+
+	return
 }

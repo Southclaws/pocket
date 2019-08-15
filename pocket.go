@@ -53,7 +53,6 @@ type PropsHandler struct {
 	propsV   reflect.Value
 	propsT   reflect.Type
 	function reflect.Value
-	methods  []string
 	returns  returnType
 }
 
@@ -79,16 +78,6 @@ func (r returnType) String() string {
 
 var reflectedResponseType = reflect.TypeOf((*Responder)(nil)).Elem()
 var reflectedErrorType = reflect.TypeOf((*error)(nil)).Elem()
-
-type MethodGet struct{}     // nolint
-type MethodHead struct{}    // nolint
-type MethodPost struct{}    // nolint
-type MethodPut struct{}     // nolint
-type MethodPatch struct{}   // nolint
-type MethodDelete struct{}  // nolint
-type MethodConnect struct{} // nolint
-type MethodOptions struct{} // nolint
-type MethodTrace struct{}   // nolint
 
 // String implements fmt.Stringer
 func (h PropsHandler) String() string {
@@ -136,9 +125,7 @@ func GenerateHandler(f interface{}) (h PropsHandler) {
 			structFields := []reflect.StructField{}
 			for i := 0; i < pt.NumField(); i++ {
 				ft := pt.Field(i)
-				if strings.HasPrefix(ft.Name, "Method") {
-					h.methods = append(h.methods, ft.Name[6:])
-				}
+				// TODO: process tags, load plugins
 				structFields = append(structFields, ft)
 			}
 

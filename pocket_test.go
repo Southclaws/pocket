@@ -30,7 +30,6 @@ func withHandler(h http.HandlerFunc, pathQuery string) *http.Response {
 
 func TestHandler_WithQueryParam(t *testing.T) {
 	withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		pocket.MethodGet
 		ParamUserID string
 	}) {
 		assert.Equal(t, "user1", props.ParamUserID)
@@ -43,7 +42,6 @@ func TestHandler_WithQueryParam(t *testing.T) {
 
 func TestHandler_WithNilErrorReturn(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		pocket.MethodGet
 	}) error {
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
@@ -55,7 +53,6 @@ func TestHandler_WithNilErrorReturn(t *testing.T) {
 
 func TestHandler_WithErrorReturn(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		pocket.MethodGet
 	}) error {
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
@@ -72,7 +69,6 @@ func TestHandler_WithErrorReturn(t *testing.T) {
 
 func TestHandler_WithResponderReturnOK(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		pocket.MethodGet
 	}) pocket.Responder {
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")
@@ -84,7 +80,6 @@ func TestHandler_WithResponderReturnOK(t *testing.T) {
 
 func TestHandler_WithResponderReturnInternal(t *testing.T) {
 	resp := withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		pocket.MethodGet
 	}) pocket.Responder {
 		assert.Assert(t, c.Writer == nil,
 			"the writer should be nil when there is a return value present")

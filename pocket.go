@@ -1,9 +1,3 @@
-// Package pocket provides a declarative HTTP handler generator which uses
-// reflection to facilitate declaring exactly what inputs (query parameters,
-// body content) a HTTP handler expects. Then, at request time, the function
-// parameters are hydrated by using the appropriate decoding methods on the
-// incoming HTTP request. It also allows easier responses by utilising the
-// request's return value instead of a writer interface.
 package pocket
 
 import (
@@ -15,6 +9,22 @@ import (
 	"strings"
 )
 
+// Handler will take a function and, if it satisfies the rules of Pocket, will
+// generate a HTTP handler with the universal signature:
+// `func (w http.ResponseWriter, r *http.Request)`. The types of the parameters
+// and returns will affect how the handler will preprocess the request before
+// calling the handler as well as how it builds a response from the return
+// value.
+//
+// If the supplied function does not match any of the criteria, Handler will
+// panic with a description of why.
+//
+// This function is all you need on the mux side of things, the rest is done via
+// responders (returning data and errors.)
+func Handler(f interface{}) http.HandlerFunc {
+	return GenerateHandler(f).Execute
+}
+
 // Ctx represents the underlying lower-level reader/writer interface typically
 // associated with HTTP handlers in Go. This type _may_ be added to a handler's
 // function signature and, if so, will be hydrated with the corresponding HTTP
@@ -24,6 +34,15 @@ import (
 type Ctx struct {
 	Writer  *http.ResponseWriter
 	Request *http.Request
+}
+
+// Responder describes an error type that can resolve to a HTTP response. This
+// means providing a response code and a body.
+type Responder interface {
+	error
+	Headers() http.Header
+	Body() io.ReadCloser
+	Status() int
 }
 
 // PropsHandler holds information about a handler after it has been analysed for
@@ -58,15 +77,6 @@ func (r returnType) String() string {
 	return "Unknown"
 }
 
-// Responder describes an error type that can resolve to a HTTP response. This
-// means providing a response code and a body.
-type Responder interface {
-	error
-	Headers() http.Header
-	Body() io.ReadCloser
-	Status() int
-}
-
 var reflectedResponseType = reflect.TypeOf((*Responder)(nil)).Elem()
 var reflectedErrorType = reflect.TypeOf((*error)(nil)).Elem()
 
@@ -83,12 +93,6 @@ type MethodTrace struct{}   // nolint
 // String implements fmt.Stringer
 func (h PropsHandler) String() string {
 	return fmt.Sprintf("%s -> %s", h.propsT.String(), h.returns.String())
-}
-
-// Handler is a helper for usage with HTTP mux libraries, it will generate a
-// standard HTTP handler function ready for use in a mux.
-func Handler(f interface{}) http.HandlerFunc {
-	return GenerateHandler(f).Execute
 }
 
 // GenerateHandler generates a props-based HTTP handler from the given function.

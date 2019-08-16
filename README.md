@@ -14,7 +14,6 @@ Here's a quick example:
 
 ```go
 func handler(props struct {
-    MethodGet
     ParamUserID string
     BodyJSON    J
 }) error {

@@ -158,6 +158,14 @@ func GenerateHandler(f interface{}) (h PropsHandler) {
 	return
 }
 
+func extractParam(r *http.Request, ft *reflect.StructField, fv *reflect.Value) {
+	fieldName := ft.Name[5:]
+	fieldValue := r.URL.Query().Get(fieldName)
+	fv.SetString(fieldValue)
+	log.Println("		Field:", fieldName, fieldValue, ft.Type)
+	return
+}
+
 // Execute is the function that will hydrate a handler's props for an incoming
 // HTTP request. If you're just using the `Handler` helper, you won't need to
 // call this function anywhere.
@@ -169,10 +177,7 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		ft := h.propsT.Field(i)
 		log.Printf("	'%v': '%v'\n", fv.Kind(), ft.Name)
 		if strings.HasPrefix(ft.Name, "Param") {
-			fieldName := ft.Name[5:]
-			fieldValue := r.URL.Query().Get(fieldName)
-			log.Println("		Field:", fieldName, fieldValue, ft.Type)
-			fv.SetString(fieldValue)
+			extractParam(r, &ft, &fv)
 		}
 	}
 

@@ -30,7 +30,7 @@ func withHandler(h http.HandlerFunc, pathQuery string) *http.Response {
 
 func TestHandler_WithQueryParam(t *testing.T) {
 	withHandler(pocket.Handler(func(c pocket.Ctx, props struct {
-		ParamUserID string
+		ParamUserID string `param:"UserID"`
 	}) {
 		assert.Equal(t, "user1", props.ParamUserID)
 		assert.Assert(t, c.Writer != nil,

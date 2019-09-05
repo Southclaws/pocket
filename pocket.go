@@ -1,11 +1,14 @@
 package pocket
 
 import (
+	"bytes"
+	"encoding"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -78,6 +81,7 @@ func (r returnType) String() string {
 
 var reflectedResponseType = reflect.TypeOf((*Responder)(nil)).Elem()
 var reflectedErrorType = reflect.TypeOf((*error)(nil)).Elem()
+var reflectedTextUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
 // String implements fmt.Stringer
 func (h PropsHandler) String() string {
@@ -158,17 +162,76 @@ func GenerateHandler(f interface{}) (h PropsHandler) {
 	return
 }
 
-func extractParam(r *http.Request, ft *reflect.StructField, fv *reflect.Value) {
-	fieldName := ft.Name[5:]
-	fieldValue := r.URL.Query().Get(fieldName)
-	fv.SetString(fieldValue)
-	log.Println("		Field:", fieldName, fieldValue, ft.Type)
-	return
+func coerceIntoValue(s string, ft *reflect.StructField, fv *reflect.Value) error {
+	switch ft.Type.Kind() {
+	case reflect.Bool:
+		value, err := strconv.ParseBool(s)
+		if err != nil {
+			return err
+		}
+		fv.SetBool(value)
+
+	case reflect.Slice:
+		switch fv.Type().Elem().Kind() {
+		case reflect.Uint8:
+			fv.SetBytes([]byte(s))
+		}
+
+	case reflect.Float32:
+		value, err := strconv.ParseFloat(s, 32)
+		if err != nil {
+			return err
+		}
+		fv.SetFloat(value)
+
+	case reflect.Float64:
+		value, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return err
+		}
+		fv.SetFloat(value)
+
+	case reflect.Int:
+		value, err := strconv.Atoi(s)
+		if err != nil {
+			return err
+		}
+		fv.SetInt(int64(value))
+
+	case reflect.Uint:
+		value, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			return err
+		}
+		fv.SetUint(value)
+
+	case reflect.String:
+		fv.SetString(s)
+
+	case reflect.Struct:
+		return fmt.Errorf("cannot handle struct type %s", ft.Type.Name())
+
+	default:
+		return fmt.Errorf("cannot handle type %v", ft.Type.Kind())
+	}
+	return nil
+}
+
+func extractProp(r *http.Request, ft *reflect.StructField, fv *reflect.Value) error {
+	if param := ft.Tag.Get("param"); param != "" {
+		return coerceIntoValue(r.URL.Query().Get(param), ft, fv)
+	}
+
+	return fmt.Errorf("no target for field %s", ft.Name)
 }
 
 // Execute is the function that will hydrate a handler's props for an incoming
 // HTTP request. If you're just using the `Handler` helper, you won't need to
 // call this function anywhere.
+//
+// It's similar to middleware except it's not meant to be used in the middle,
+// only at the end of a request middleware chain where the actual business logic
+// happens. So it's more like "endware" than middleware...
 func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	log.Println("Executing handler:", h)
 
@@ -176,15 +239,21 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		fv := h.propsV.Field(i)
 		ft := h.propsT.Field(i)
 		log.Printf("	'%v': '%v'\n", fv.Kind(), ft.Name)
-		if strings.HasPrefix(ft.Name, "Param") {
-			extractParam(r, &ft, &fv)
+		if err := extractProp(r, &ft, &fv); err != nil {
+			// TODO: handle errors - HTTP bad request? pass to logger?
+			log.Panic(err)
+			return
 		}
 	}
 
+	// This could just become a context.Context tbh...
 	hctx := Ctx{
 		Request: r,
 	}
 
+	// If the return type of the handler is "Writer" that means it doesn't have
+	// an explicit return type on the function signature and the function
+	// instead needs access to the underlying http.ResponseWriter for response.
 	if h.returns == returnTypeWriter {
 		hctx.Writer = &w
 	}
@@ -218,24 +287,11 @@ func (h PropsHandler) Execute(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.Copy(w, body); err != nil {
 					panic(err)
 				}
+			} else if errstring := responder.Error(); errstring != "" {
+				if _, err := io.Copy(w, bytes.NewBufferString(errstring)); err != nil {
+					panic(err)
+				}
 			}
-		}
-
-	case returnTypeWriter:
-		ei := results[0].Interface()
-		switch ev := ei.(type) {
-		case fmt.Stringer:
-			if _, err := w.Write([]byte(ev.String())); err != nil {
-				panic(err)
-			}
-
-		case io.Reader:
-			if _, err := io.Copy(w, ev); err != nil {
-				panic(err)
-			}
-
-		default:
-			panic(fmt.Sprintf("don't know how to respond with a %v", ev))
 		}
 
 	default:

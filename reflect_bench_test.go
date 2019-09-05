@@ -57,3 +57,25 @@ func BenchmarkFunctionInterfaceCastCall(b *testing.B) {
 		handlerI.(func(P) error)(arg)
 	}
 }
+
+// Some struct access benchmarks
+
+func BenchmarkNumFieldsType(b *testing.B) {
+	type T struct {
+		A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z string
+	}
+	TT := reflect.TypeOf(T{})
+	for n := 0; n < b.N; n++ {
+		TT.NumField()
+	}
+}
+
+func BenchmarkNumFieldsValue(b *testing.B) {
+	type T struct {
+		A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z string
+	}
+	TV := reflect.ValueOf(T{})
+	for n := 0; n < b.N; n++ {
+		TV.NumField()
+	}
+}

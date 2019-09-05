@@ -14,11 +14,11 @@ Here's a quick example:
 
 ```go
 func handler(props struct {
-    ParamUserID string
-    BodyJSON    J
-}) error {
+    UserID   string `param:"user_id"`
+    BodyJSON J
+}) pocket.Responder {
     // Do stuff with `props`!
-    // simply return an error! no more writing to w!
+    // simply return an error or a responder! no more writing to w!
 }
 ```
 

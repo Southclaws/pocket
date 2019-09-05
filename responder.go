@@ -9,6 +9,15 @@ import (
 
 var _ = (Responder)(&BasicResponder{})
 
+// Responder describes an error type that can resolve to a HTTP response. This
+// means providing a response code and a body.
+type Responder interface {
+	error
+	Headers() http.Header
+	Body() io.ReadCloser
+	Status() int
+}
+
 // BasicResponder provides a basic implementation for the Responder interface
 // for writing simple responses.
 type BasicResponder struct {

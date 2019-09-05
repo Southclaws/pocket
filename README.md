@@ -2,6 +2,8 @@
 
 > Pocket gophers, commonly referred to as just gophers, are burrowing rodents of the family Geomyidae.
 
+[![Actions Status](https://github.com/Southclaws/pocket/workflows/Go/badge.svg)](https://github.com/Southclaws/pocket/actions)
+
 **(Work In Progress)**
 
 Pocket is a neat little web library to help you write cleaner HTTP request handlers!
